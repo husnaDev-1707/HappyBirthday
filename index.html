@@ -1,22 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Birthday Cake with Blowable Candles</title>
+  <meta charset="UTF-8">
+  <title>Birthday Cake 🎂</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       text-align: center;
-      font-family: sans-serif;
+      font-family: 'Segoe UI', sans-serif;
       background: #fdf6f0;
+      margin: 0;
+      padding: 20px;
     }
+
+    h1 {
+      font-size: 1.8em;
+      margin: 10px 0;
+    }
+
+    #inputAge, #inputName {
+      width: 60px;
+      text-align: center;
+      font-size: 1em;
+      margin: 0 5px;
+    }
+
+    #inputName {
+      width: 120px;
+    }
+
     #cake {
-      margin: 50px auto;
-      width: 200px;
+      margin: 30px auto;
+      width: 90%;
+      max-width: 300px;
       height: 150px;
-      background: #D8A7B1;
+      background: #f39c12;
       border-radius: 10px 10px 0 0;
       position: relative;
     }
+
     .candle {
       width: 6px;
       height: 30px;
@@ -26,6 +48,7 @@
       position: relative;
       top: -30px;
     }
+
     .flame {
       width: 10px;
       height: 10px;
@@ -43,19 +66,40 @@
       100% { transform: scale(1); opacity: 1; }
     }
 
-    #inputAge {
-      width: 60px;
-      text-align: center;
+    #birthdayMessage {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #d63384;
+      margin-top: 20px;
+    }
+
+    canvas#confetti {
+      position: fixed;
+      pointer-events: none;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 999;
     }
   </style>
 </head>
 <body>
+  <h1>🎂 Blow the Candles!</h1>
 
-  <h1>🎉 Happy Birthday! 🎂</h1>
-  <label>Enter Age: <input id="inputAge" type="number" min="1" max="100" value="5"></label>
-  <button onclick="drawCandles()">Generate Candles</button>
+  <p>
+    Name:
+    <input id="inputName" type="text" placeholder="e.g. Husna">
+    Age:
+    <input id="inputAge" type="number" min="1" max="100" value="5">
+    <button onclick="drawCandles()">Generate</button>
+  </p>
 
   <div id="cake"></div>
+
+  <div id="birthdayMessage"></div>
+
+  <canvas id="confetti"></canvas>
 
   <script>
     function drawCandles() {
@@ -65,17 +109,30 @@
       for (let i = 0; i < age; i++) {
         const candle = document.createElement('div');
         candle.className = 'candle';
-
         const flame = document.createElement('div');
         flame.className = 'flame';
-        flame.classList.add('flame-' + i); // for tracking each
-
+        flame.classList.add('flame-' + i);
         candle.appendChild(flame);
         cake.appendChild(candle);
       }
+
+      // Reset message & confetti
+      document.getElementById('birthdayMessage').textContent = '';
+      confetti = [];
     }
 
-    // Blow detection using microphone
+    function blowOutCandles() {
+      const flames = document.querySelectorAll('.flame');
+      flames.forEach(flame => flame.remove());
+
+      // 🎉 Show name-based message
+      const name = document.getElementById('inputName').value || "You";
+      document.getElementById('birthdayMessage').textContent = `🎉 Happy Birthday, ${name}! 🎉`;
+
+      launchConfetti();
+    }
+
+    // Microphone
     async function startMic() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -84,13 +141,11 @@
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;
         mic.connect(analyser);
-
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
         function detectBlow() {
           analyser.getByteFrequencyData(dataArray);
           const volume = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-
           if (volume > 50) {
             blowOutCandles();
           }
@@ -98,21 +153,57 @@
         }
         detectBlow();
       } catch (err) {
-        alert('Microphone access denied.');
-        console.error(err);
+        alert('Microphone access is required to blow the candles!');
       }
     }
 
-    function blowOutCandles() {
-      const flames = document.querySelectorAll('.flame');
-      flames.forEach(flame => flame.remove());
+    // Confetti
+    const canvas = document.getElementById('confetti');
+    const ctx = canvas.getContext('2d');
+    let confetti = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     }
 
-    // Start mic on page load
-    window.onload = () => {
-      drawCandles(); // draw default
-      startMic();
-    };
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function launchConfetti() {
+      confetti = [];
+      for (let i = 0; i < 100; i++) {
+        confetti.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height - canvas.height,
+          r: Math.random() * 6 + 2,
+          d: Math.random() * 100 + 10,
+          color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+          tilt: Math.random() * 10 - 5
+        });
+      }
+    }
+
+    function drawConfetti() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = 0; i < confetti.length; i++) {
+        const c = confetti[i];
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctx.fillStyle = c.color;
+        ctx.fill();
+        c.y += Math.cos(c.d / 10) + 1;
+        c.x += Math.sin(c.d / 15);
+        if (c.y > canvas.height) {
+          c.y = -10;
+        }
+      }
+      requestAnimationFrame(drawConfetti);
+    }
+
+    drawCandles();
+    drawConfetti();
+    startMic();
   </script>
 </body>
 </html>
